@@ -1,8 +1,10 @@
 package main
 
 import (
+	"github.com/prometheus/common/log"
 	"k8s.io/api/core/v1"
 	schedulerapi "k8s.io/kubernetes/pkg/scheduler/apis/extender/v1"
+	"kube-scheduler-extender/kubeclientset"
 )
 
 type Predicate struct {
@@ -15,6 +17,9 @@ func (p Predicate) Handler(args schedulerapi.ExtenderArgs) *schedulerapi.Extende
 	canSchedule := make([]v1.Node, 0, len(args.Nodes.Items))
 	canNotSchedule := make(map[string]string)
 
+	// 确保同一时刻只有一个pod被处理
+	<-kubeclientset.Complete
+	log.Info("Try to predicate nodes for pod ", pod.Name)
 	for _, node := range args.Nodes.Items {
 		result, err := p.Func(*pod, node)
 		if err != nil {
@@ -34,5 +39,7 @@ func (p Predicate) Handler(args schedulerapi.ExtenderArgs) *schedulerapi.Extende
 		Error:       "",
 	}
 
+	kubeclientset.Complete <- 0
+	log.Info("Finished to predicate nodes for pod ", pod.Name)
 	return &result
 }

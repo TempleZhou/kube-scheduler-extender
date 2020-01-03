@@ -27,9 +27,10 @@ replace (
 )
 
 require (
-	github.com/comail/colog v0.0.0-20160416085026-fba8e7b1f46c
 	github.com/julienschmidt/httprouter v1.3.0
+	github.com/prometheus/common v0.4.1
 	k8s.io/api v0.17.0
 	k8s.io/apimachinery v0.17.0
+	k8s.io/client-go v0.17.0
 	k8s.io/kubernetes v1.17.0
 )

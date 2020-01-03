@@ -1,120 +1,57 @@
 package main
 
 import (
-	"fmt"
-	"log"
-	"net/http"
-	"os"
-	"strings"
-
-	"github.com/comail/colog"
+	"flag"
 	"github.com/julienschmidt/httprouter"
+	"github.com/prometheus/common/log"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
+	detector "kube-scheduler-extender/detecttoomanypodsinitializing"
+	"kube-scheduler-extender/kubeclientset"
+	"net/http"
 
 	"k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
-	schedulerapi "k8s.io/kubernetes/pkg/scheduler/apis/extender/v1"
 )
 
 const (
-	versionPath      = "/version"
-	apiPrefix        = "/scheduler"
-	bindPath         = apiPrefix + "/bind"
-	preemptionPath   = apiPrefix + "/preemption"
-	predicatesPrefix = apiPrefix + "/predicates"
-	prioritiesPrefix = apiPrefix + "/priorities"
+	versionPath         = "/version"
+	apiPrefix           = "/scheduler"
+	predicatesPrefix    = apiPrefix + "/predicates"
+	maxInitializingPods = 2
 )
 
 var (
 	version string // injected via ldflags at build time
 
-	TruePredicate = Predicate{
-		Name: "always_true",
+	TooManyPodsInitializingPredicate = Predicate{
+		Name: "detect_too_many_pods_initializing",
 		Func: func(pod v1.Pod, node v1.Node) (bool, error) {
-
-			return true, nil
-		},
-	}
-
-	ZeroPriority = Prioritize{
-		Name: "zero_score",
-		Func: func(_ v1.Pod, nodes []v1.Node) (*schedulerapi.HostPriorityList, error) {
-			var priorityList schedulerapi.HostPriorityList
-			priorityList = make([]schedulerapi.HostPriority, len(nodes))
-			for i, node := range nodes {
-				priorityList[i] = schedulerapi.HostPriority{
-					Host:  node.Name,
-					Score: 0,
-				}
-			}
-			return &priorityList, nil
-		},
-	}
-
-	NoBind = Bind{
-		Func: func(podName string, podNamespace string, podUID types.UID, node string) error {
-			return fmt.Errorf("This extender doesn't support Bind.  Please make 'BindVerb' be empty in your ExtenderConfig.")
-		},
-	}
-
-	EchoPreemption = Preemption{
-		Func: func(
-			_ v1.Pod,
-			_ map[string]*schedulerapi.Victims,
-			nodeNameToMetaVictims map[string]*schedulerapi.MetaVictims,
-		) map[string]*schedulerapi.MetaVictims {
-			return nodeNameToMetaVictims
+			return detector.DetectTooManyPodsInitializing(node, maxInitializingPods), nil
 		},
 	}
 )
 
-func StringToLevel(levelStr string) colog.Level {
-	switch level := strings.ToUpper(levelStr); level {
-	case "TRACE":
-		return colog.LTrace
-	case "DEBUG":
-		return colog.LDebug
-	case "INFO":
-		return colog.LInfo
-	case "WARNING":
-		return colog.LWarning
-	case "ERROR":
-		return colog.LError
-	case "ALERT":
-		return colog.LAlert
-	default:
-		log.Printf("warning: LOG_LEVEL=\"%s\" is empty or invalid, fallling back to \"INFO\".\n", level)
-		return colog.LInfo
-	}
-}
-
 func main() {
-	colog.SetDefaultLevel(colog.LInfo)
-	colog.SetMinLevel(colog.LInfo)
-	colog.SetFormatter(&colog.StdFormatter{
-		Colors: true,
-		Flag:   log.Ldate | log.Ltime | log.Lshortfile,
-	})
-	colog.Register()
-	level := StringToLevel(os.Getenv("LOG_LEVEL"))
-	log.Print("Log level was set to ", strings.ToUpper(level.String()))
-	colog.SetMinLevel(level)
+	// 初始化 k8 client
+	var kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
+	flag.Parse()
+	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
+	if err != nil {
+		panic(err.Error())
+	}
+	kubeclientset.Client, _ = kubernetes.NewForConfig(config)
 
+	// 初始化 http server
 	router := httprouter.New()
 	AddVersion(router)
 
-	predicates := []Predicate{TruePredicate}
+	predicates := []Predicate{TooManyPodsInitializingPredicate}
 	for _, p := range predicates {
 		AddPredicate(router, p)
 	}
 
-	priorities := []Prioritize{ZeroPriority}
-	for _, p := range priorities {
-		AddPrioritize(router, p)
-	}
-
-	AddBind(router, NoBind)
-
-	log.Print("info: server starting on the port :80")
+	kubeclientset.Complete <- 0
+	log.Info("server starting on the port :80")
 	if err := http.ListenAndServe(":80", router); err != nil {
 		log.Fatal(err)
 	}
