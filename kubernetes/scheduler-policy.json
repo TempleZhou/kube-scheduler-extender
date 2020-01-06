@@ -1,0 +1,12 @@
+{
+  "kind": "Policy",
+  "apiVersion": "v1",
+  "extenders" : [
+    {
+      "urlPrefix": "http://localhost:10233/scheduler",
+      "filterVerb": "predicates/detect_too_many_pods_initializing",
+      "enableHttps": false,
+      "nodeCacheCapable": false
+    }
+  ]
+}

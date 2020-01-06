@@ -13,6 +13,7 @@ spec:
         - kube-scheduler
         - --bind-address=127.0.0.1
         - --kubeconfig=/etc/kubernetes/scheduler.conf
+        - --policy-config-file=/etc/kubernetes/scheduler-policy.json
         - --leader-elect=true
       image: kube-scheduler
       imagePullPolicy: IfNotPresent
@@ -33,6 +34,25 @@ spec:
         - mountPath: /etc/kubernetes/scheduler.conf
           name: kubeconfig
           readOnly: true
+        - mountPath: /etc/kubernetes/scheduler-policy.json
+          name: scheduler-policy
+          readOnly: true
+    - command:
+        - kube-scheduler-extender
+        - --kubeconfig=/etc/kubernetes/scheduler.conf
+      image: kube-scheduler-extender:0.0.1
+      imagePullPolicy: IfNotPresent
+      livenessProbe:
+        tcpSocket:
+          port: 10233
+      name: kube-scheduler-extender
+      resources:
+        requests:
+          cpu: 100m
+      volumeMounts:
+        - mountPath: /etc/kubernetes/scheduler.conf
+          name: kubeconfig
+          readOnly: true
   hostNetwork: true
   priorityClassName: system-cluster-critical
   volumes:
@@ -40,4 +60,8 @@ spec:
         path: /etc/kubernetes/scheduler.conf
         type: FileOrCreate
       name: kubeconfig
+    - hostPath:
+        path: /etc/kubernetes/scheduler-policy.json
+        type: FileOrCreate
+      name: scheduler-policy
 status: {}
