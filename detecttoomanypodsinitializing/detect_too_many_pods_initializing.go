@@ -21,7 +21,10 @@ func DetectTooManyPodsInitializing(node v1.Node, maxInitializingPods int) (res b
 		if strings.HasPrefix(namespace, "kube-") {
 			continue
 		}
-		pods, _ := clientset.CoreV1().Pods(namespace).List(metav1.ListOptions{FieldSelector: "spec.nodeName=" + node.Name})
+		pods, err := clientset.CoreV1().Pods(namespace).List(metav1.ListOptions{FieldSelector: "spec.nodeName=" + node.Name})
+		if err != nil {
+			panic(err.Error())
+		}
 
 		for _, podItem := range pods.Items {
 			podIsReady := false

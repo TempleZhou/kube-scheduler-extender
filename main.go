@@ -4,6 +4,7 @@ import (
 	"flag"
 	"github.com/julienschmidt/httprouter"
 	"github.com/prometheus/common/log"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	detector "kube-scheduler-extender/detecttoomanypodsinitializing"
@@ -40,6 +41,12 @@ func main() {
 		panic(err.Error())
 	}
 	kubeclientset.Client, _ = kubernetes.NewForConfig(config)
+	// 验证 kubeconfig 有效
+	nodes, err := kubeclientset.Client.CoreV1().Nodes().List(metav1.ListOptions{})
+	if err != nil {
+		panic(err.Error())
+	}
+	detector.DetectTooManyPodsInitializing(nodes.Items[0], maxInitializingPods)
 
 	// 初始化 http server
 	router := httprouter.New()
@@ -50,8 +57,9 @@ func main() {
 		AddPredicate(router, p)
 	}
 
-	log.Info("server starting on the port :80")
-	if err := http.ListenAndServe(":80", router); err != nil {
+	serverPort := "10233"
+	log.Info("server starting on the port: ", serverPort)
+	if err := http.ListenAndServe(":"+serverPort, router); err != nil {
 		log.Fatal(err)
 	}
 }

@@ -12,11 +12,15 @@ go build -ldflags "-s -w -X main.version=$VERSION" kube-scheduler-extender
 
 ### docker build
 
-```
+```bash
 docker build . -t kube-scheduler-extender:0.0.1
 ```
 
-### schedule test pod
+### run kube-scheduler-extender
+
+```bash
+
+```
 
 you will see `test-pod` will be scheduled by `my-scheduler`.
 
