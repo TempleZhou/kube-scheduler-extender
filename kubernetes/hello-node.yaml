@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: hello-node
+  name: hello-node
+spec:
+  replicas: 7
+  selector:
+    matchLabels:
+      app: hello-node
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: hello-node
+    spec:
+      containers:
+        - image: hello-node
+          imagePullPolicy: IfNotPresent
+          name: hello-node
+          readinessProbe:
+            tcpSocket:
+              port: 8080

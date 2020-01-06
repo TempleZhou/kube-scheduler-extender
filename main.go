@@ -50,7 +50,6 @@ func main() {
 		AddPredicate(router, p)
 	}
 
-	kubeclientset.Complete <- 0
 	log.Info("server starting on the port :80")
 	if err := http.ListenAndServe(":80", router); err != nil {
 		log.Fatal(err)

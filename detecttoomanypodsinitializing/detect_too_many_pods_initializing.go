@@ -21,14 +21,20 @@ func DetectTooManyPodsInitializing(node v1.Node, maxInitializingPods int) (res b
 		if strings.HasPrefix(namespace, "kube-") {
 			continue
 		}
-		pods, _ := clientset.CoreV1().Pods(namespace).List(metav1.ListOptions{})
+		pods, _ := clientset.CoreV1().Pods(namespace).List(metav1.ListOptions{FieldSelector: "spec.nodeName=" + node.Name})
 
 		for _, podItem := range pods.Items {
+			podIsReady := false
 			for _, condition := range podItem.Status.Conditions {
-				if podItem.Status.HostIP == node.Status.Addresses[1].Address && condition.Type == v1.PodReady && condition.Status != v1.ConditionTrue {
-					log.Info("pod ", podItem.Name, " on node:", node.Name, " is not ready...")
-					cnt++
+				if condition.Type == v1.PodReady &&
+					condition.Status == v1.ConditionTrue {
+					podIsReady = true
 				}
+
+			}
+			if !podIsReady {
+				log.Info("pod ", podItem.Name, " on node:", podItem.Status.HostIP, " is not ready...")
+				cnt++
 			}
 		}
 	}

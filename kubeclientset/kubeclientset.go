@@ -5,6 +5,5 @@ import (
 )
 
 var (
-	Client   *clientset.Clientset
-	Complete = make(chan int, 1)
+	Client *clientset.Clientset
 )
