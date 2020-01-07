@@ -25,8 +25,6 @@ docker build . -t kube-scheduler-extender:0.0.1
 
 > 注意： 需要修改 kube-scheduler.yaml 中的镜像为实际使用的镜像
 
-在 kube-schedule Pod 中加入 kube-scheduler-extender Container 之后，可以看到如下状态：
-
 ### 创建测试 pod
 
 ```bash
