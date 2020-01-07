@@ -19,13 +19,11 @@ func DetectTooManyPodsInitializing(node v1.Node, maxInitializingPods int) (res b
 	for _, podItem := range pods.Items {
 		podIsReady := false
 		for _, condition := range podItem.Status.Conditions {
-			if condition.Type == v1.PodReady &&
-				condition.Status == v1.ConditionTrue {
+			if condition.Type == v1.PodReady && condition.Status == v1.ConditionTrue {
 				podIsReady = true
 			}
-
 		}
-		if !podIsReady {
+		if !podIsReady && isNotJob(podItem) {
 			log.Info("pod ", podItem.Name, " on node:", podItem.Status.HostIP, " is not ready...")
 			cnt++
 		}
@@ -36,4 +34,17 @@ func DetectTooManyPodsInitializing(node v1.Node, maxInitializingPods int) (res b
 		return false
 	}
 	return true
+}
+
+// 只有 Pod 不是 Job 类型 且 没有 Ready 时，才算作正在启动的应用
+func isNotJob(pod v1.Pod) bool {
+	flag := false
+	for _, ownerReference := range pod.OwnerReferences {
+		if ownerReference.Kind != "Job" &&
+			ownerReference.Kind != "JobTemplate" &&
+			ownerReference.Kind != "CronJob" {
+			flag = true
+		}
+	}
+	return flag
 }
