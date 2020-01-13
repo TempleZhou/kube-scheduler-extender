@@ -5,12 +5,11 @@ ENV GO111MODULE=on
 ENV CGO_ENABLED=0
 ENV GOOS=linux
 ENV GOARCH=amd64
+ENV GOPROXY=https://goproxy.cn
 
 WORKDIR /go/src/kube-scheduler-extender
-COPY go.mod .
-COPY go.sum .
-RUN GO111MODULE=on go mod download
 COPY . .
+RUN GO111MODULE=on go mod download
 RUN go install -ldflags "-s -w -X main.version=$VERSION" kube-scheduler-extender
 
 FROM gcr.io/google_containers/ubuntu-slim:0.14
