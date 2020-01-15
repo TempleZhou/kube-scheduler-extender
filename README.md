@@ -15,6 +15,10 @@ go build -ldflags "-s -w -X main.version=$VERSION" kube-scheduler-extender
 
 ```bash
 docker build . -t kube-scheduler-extender:0.0.1
+
+# 或者直接拉取构建好的镜像
+
+docker pull tpzhou/kube-scheduler-extender:0.0.1
 ```
 
 ### run kube-scheduler-extender
